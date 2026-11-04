@@ -109,6 +109,38 @@ test("Juno waits while the Ethereum node on the box is still syncing (Juno stops
   assert.equal(box.l1Ready(), true);
 });
 
+test("right after choosing an own Ethereum node, Juno does not start with the old automatic choice", () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  // a check that was already running picked Geth (installed, not answering) ...
+  box.l1 = { client: { id: "geth", title: "Geth" }, url: "ws://ethchain-geth.my.ava.do:8546", states: [{ id: "geth", installed: true, answering: false }] };
+  // ... when the owner saved their own node
+  box.settings.l1 = "custom";
+  box.settings.l1Custom = "wss://example.org/ws";
+  assert.equal(box.l1Ready(), false);
+  assert.equal(box.junoProc.build(), null);
+  box.l1 = { client: { id: "custom", title: "Your own Ethereum node" }, url: "wss://example.org/ws", states: [] };
+  assert.equal(box.l1Ready(), true);
+  const args = box.junoProc.build().args;
+  assert.equal(args[args.indexOf("--eth-node") + 1], "wss://example.org/ws");
+});
+
+test("a change made while a check runs gets its own check right after", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  let calls = 0;
+  let release;
+  box.refreshL1 = async () => { calls++; if (calls === 1) await new Promise((r) => (release = r)); };
+  box.snapshot = {}; // stop each check after refreshL1
+  const first = box.tick();
+  await box.tick(); // while the first one runs
+  assert.equal(calls, 1);
+  release();
+  await first;
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(calls, 2);
+});
+
 test("a node that stopped three times in a row is reported, not shown as starting", () => {
   const dir = mkdtempSync(join(tmpdir(), "stark-"));
   const box = new StarknetBox({ dataDir: dir, log: () => {} });

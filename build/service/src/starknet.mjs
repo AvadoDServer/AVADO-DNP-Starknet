@@ -151,7 +151,9 @@ export class StarknetBox {
    */
   l1Ready() {
     if (!this.l1.url) return false;
-    if (this.settings.l1 === "custom") return true;
+    // the owner's own node, once this.l1 has been refreshed to it (right after the owner saves the
+    // choice, a check that was already running can still hold the old, automatic choice)
+    if (this.settings.l1 === "custom") return this.l1.client?.id === "custom";
     const st = this.l1.client ? this.l1.states.find((x) => x.id === this.l1.client.id) : null;
     return !!(st && st.answering && st.synced === true);
   }
@@ -296,7 +298,11 @@ export class StarknetBox {
 
   /** One round of "what should be running now". Called every 15 seconds and after every change. */
   async tick() {
-    if (this.ticking) return;
+    if (this.ticking) {
+      // a change made during a running check (a new Ethereum choice) is applied right after it
+      this.tickAgain = true;
+      return;
+    }
     this.ticking = true;
     try {
       await this.refreshL1();
@@ -326,6 +332,10 @@ export class StarknetBox {
       this.log(`check failed: ${err.message}`);
     } finally {
       this.ticking = false;
+      if (this.tickAgain) {
+        this.tickAgain = false;
+        setTimeout(() => this.tick(), 0);
+      }
     }
   }
 
