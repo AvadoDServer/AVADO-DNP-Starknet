@@ -92,7 +92,9 @@ function verdict(s) {
   if (n === "downloading") {
     const sn = s.node.snapshot;
     const pct = sn && sn.total ? Math.floor((sn.bytes / sn.total) * 100) : 0;
-    return ["unknown", `Setting up your Starknet node (${pct}%)`, "Downloading a recent copy of Starknet. This takes a few hours, depending on your internet connection."];
+    const noEth = !s.ethereum.using && s.ethereum.choice !== "none";
+    return [noEth ? "warning" : "unknown", `Setting up your Starknet node (${pct}%)`,
+      "Downloading a recent copy of Starknet. This takes a few hours, depending on your internet connection." + (noEth ? " Install an Ethereum node meanwhile (see below)." : "")];
   }
   if (n !== "synced") return ["unknown", "Your Starknet node is catching up", "This can take a while. You can already set up your validator below."];
   if (v.state === "problem") return ["warning", "Your validator needs attention", PROBLEMS[v.problem] || "See “Your validator” below."];
@@ -140,7 +142,8 @@ function render(s) {
   }
   show("fast-failed", s.node.state === "downloadFailed");
   if (s.node.snapshotError) $("fast-failed-text").textContent = s.node.snapshotError.message;
-  show("need-eth", s.node.state === "waitingForEthereum");
+  // also while the fast start downloads: the node can only start once an Ethereum node is there
+  show("need-eth", s.node.state === "waitingForEthereum" || (!s.ethereum.using && s.ethereum.choice !== "none"));
 
   const v = s.validator;
   const editing = $("v-setup").dataset.editing === "1";
