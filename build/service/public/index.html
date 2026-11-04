@@ -58,6 +58,7 @@
         <h2>The fast start download stopped</h2>
         <p id="fast-failed-text"></p>
         <p class="muted small">The box tries again by itself every 30 minutes.</p>
+        <p class="muted small" id="fast-failed-detail"></p>
         <div class="actions" data-mt="md">
           <button type="button" class="button" id="fast-retry">Try again now</button>
           <button type="button" class="button ghost" id="fast-skip2">Sync from the first block instead</button>
@@ -83,14 +84,19 @@
         <p class="lead">
           Your box can earn STRK rewards by confirming, about once an hour, that it sees the latest Starknet blocks (an “attestation”).
         </p>
-        <ul class="never">
-          <li>You need at least <strong>20,000 STRK</strong> of your own to stake. It stays under the control of your own wallet. This box never sees that wallet or its key.</li>
-          <li>The box signs attestations with a <strong>separate, small account</strong> that only pays the tiny fees (Starknet calls it the “operational account”). That is the only key the box keeps.</li>
-          <li>Rewards go to a reward address in your own wallet. If the box misses an attestation, you get no reward for that hour.</li>
-          <li>Getting your stake back takes 7 days after you ask for it.</li>
-        </ul>
+        <p data-mt="sm">
+          You need at least <strong>20,000 STRK</strong> of your own. It stays in your own wallet: the box only keeps the key of a small, separate
+          account that signs the attestations.
+        </p>
         <details class="more">
-          <summary>Not enough STRK? About delegation</summary>
+          <summary>Before you stake: how it works</summary>
+          <ul class="never" data-mt="sm">
+            <li>You need at least <strong>20,000 STRK</strong> of your own to stake. It stays under the control of your own wallet. This box never sees that wallet or its key.</li>
+            <li>The box signs attestations with a <strong>separate, small account</strong> that only pays the tiny fees (Starknet calls it the “operational account”). That is the only key the box keeps.</li>
+            <li>Rewards go to a reward address in your own wallet. If the box misses an attestation, you get no reward for that hour.</li>
+            <li>Getting your stake back takes 7 days after you ask for it.</li>
+          </ul>
+          <p class="small" data-mt="md"><strong>Not enough STRK? About delegation</strong></p>
           <p class="small" data-mt="sm">
             The 20,000 STRK must be your own. StarkWare's delegation programme adds millions of STRK to a few validators, but it is meant for
             professional operators: you must already run a validator, show 99% uptime for three months on Starknet and its test network, pass a
@@ -102,7 +108,7 @@
 
         <h2 data-mt="lg">Set it up in four steps</h2>
         <ol class="steps">
-          <li><strong>Wait until the Starknet node is up to date.</strong> The status at the top of this page turns green.</li>
+          <li><strong>Wait until the Starknet node is up to date.</strong> The status at the top of this page turns green. <span class="tick" id="step-1-state"></span></li>
           <li>
             <strong>Make a new account for attestations</strong> in your Starknet wallet (Ready, formerly Argent, or Braavos). Send it about
             <strong>100 STRK</strong> for fees and make one transaction with it so the wallet deploys it. Do not switch on extra protection for this
@@ -160,8 +166,9 @@
       </section>
 
       <section class="card">
-        <h2>Settings</h2>
-        <form class="form" id="eth-form">
+        <details class="more" id="more-options">
+        <summary>More options</summary>
+        <form class="form" id="eth-form" data-mt="md">
           <label class="field">
             <span>Ethereum node to check against</span>
             <select id="eth-choice">
@@ -204,6 +211,7 @@
               <span class="muted" id="over-msg" role="status"></span>
             </div>
           </form>
+        </details>
         </details>
       </section>
 

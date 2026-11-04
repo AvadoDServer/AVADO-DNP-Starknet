@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isAllowedHost, checkCsrf } from "../src/lib/http.mjs";
+import { isAllowedHost, checkCsrf, CSP } from "../src/lib/http.mjs";
 
 const names = ["starknet.my.ava.do"];
 
@@ -31,4 +31,9 @@ test("state-changing requests need the custom header and the same origin", () =>
     /Cross-site/,
   );
   assert.equal(checkCsrf({ method: "GET", headers: {} }), null);
+});
+
+test("only the AVADO Admin may show the page in a frame", () => {
+  const fa = /frame-ancestors ([^;]+)/.exec(CSP)[1].trim().split(/\s+/);
+  assert.deepEqual(fa, ["'self'", "http://my.ava.do", "http://*.my.ava.do"]);
 });

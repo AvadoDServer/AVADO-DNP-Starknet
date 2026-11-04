@@ -90,7 +90,7 @@ function send(res, status, body, headers = {}) {
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
-    "x-frame-options": "DENY",
+    // no X-Frame-Options: the CSP's frame-ancestors decides (the Admin shows this page in a frame)
     ...headers,
   });
   res.end(body);
@@ -100,8 +100,10 @@ export function sendJson(res, status, value) {
   send(res, status, JSON.stringify(value), { "content-type": "application/json; charset=utf-8" });
 }
 
-const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+// frame-ancestors: only the AVADO Admin (my.ava.do) may show this page, in its package "Setup" tab
+// (same rule as AVADO Care and Rocket Pool); every other site is refused (clickjacking).
+export const CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'self' http://my.ava.do http://*.my.ava.do; base-uri 'none'; form-action 'none'";
 
 /**
  * routes: { "GET /api/status": async (body, req) => value, "POST /api/x": ... }

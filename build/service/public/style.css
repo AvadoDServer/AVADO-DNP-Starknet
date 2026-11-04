@@ -149,6 +149,17 @@ pre {
   margin: 0;
 }
 
+.tick {
+  display: inline-block;
+  font-size: 0.85em;
+  color: rgb(var(--fg-muted));
+}
+
+.tick.ok {
+  color: rgb(var(--success-text));
+  font-weight: 600;
+}
+
 .steps {
   margin: 0;
   padding-left: 1.3rem;
@@ -276,6 +287,10 @@ pre {
 }
 details.more {
   margin-top: var(--space-md);
+}
+
+.card > details.more:first-child {
+  margin-top: 0;
 }
 details.more summary {
   cursor: pointer;

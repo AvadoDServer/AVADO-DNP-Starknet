@@ -46,12 +46,26 @@ const PROBLEMS = {
   rpcVersion: "The validator and the Starknet node do not speak the same version. Update this package.",
 };
 
+/** The download error in plain words; the technical text stays in the log and in small print. */
+function downloadProblem(msg) {
+  const m = String(msg || "");
+  if (/not enough free disk space/i.test(m)) return `Not enough free disk space for the copy (${m.replace(/^.*space:\s*/i, "")}). Free up space or remove apps you no longer use.`;
+  if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|ECONNRESET|EHOSTUNREACH|ENETUNREACH|no data for 60 seconds|socket hang up|closed early/i.test(m)) {
+    return "The box could not reach the download server. Check that your AVADO is connected to the internet.";
+  }
+  if (/answered \d+/.test(m)) return "The download server is not available right now.";
+  if (/unpack|empty/i.test(m)) return "The downloaded copy could not be unpacked.";
+  return "The download did not finish.";
+}
+
 function nodeText(s) {
   const n = s.node;
   switch (n.state) {
     case "downloading": return "Downloading a recent copy";
     case "downloadFailed": return "Download stopped";
     case "waitingForEthereum": return "Waiting for an Ethereum node";
+    case "waitingForEthereumSync": return `Waits until ${s.ethereum.using ? s.ethereum.using.title : "the Ethereum node"} is up to date`;
+    case "keepsStopping": return "Keeps stopping";
     case "starting": return "Starting";
     case "syncing": return n.block != null && n.highest ? `Catching up (block ${n.block.toLocaleString()} of ${n.highest.toLocaleString()})` : "Catching up";
     case "synced": return `Up to date (block ${Number(n.block).toLocaleString()})`;
@@ -87,7 +101,15 @@ function verdict(s) {
   const n = s.node.state;
   const v = s.validator;
   if (n === "waitingForEthereum") return ["warning", "Install an Ethereum node first", "Your Starknet node needs Geth or Nethermind on this AVADO."];
-  if (n === "downloadFailed") return ["warning", "The fast start download stopped", s.node.snapshotError ? s.node.snapshotError.message : ""];
+  if (n === "waitingForEthereumSync") {
+    const title = s.ethereum.using ? s.ethereum.using.title : "Your Ethereum node";
+    const st = (s.ethereum.clients || []).find((c) => s.ethereum.using && c.id === s.ethereum.using.id);
+    const pct = st && st.progress ? ` (now ${Math.floor(st.progress * 100)}%)` : "";
+    const why = !st || !st.answering ? `${title} is not answering yet.` : `${title} is still syncing${pct}. A new Ethereum node takes a day or two.`;
+    return ["unknown", `Waiting for ${title}`, `${why} Your Starknet node starts by itself as soon as ${title} is up to date.`];
+  }
+  if (n === "keepsStopping") return ["warning", "Your Starknet node keeps stopping", "The box keeps restarting it. If this lasts more than an hour, send the Starknet node log (under “Details for support”) to AVADO support."];
+  if (n === "downloadFailed") return ["warning", "The fast start download stopped", downloadProblem(s.node.snapshotError && s.node.snapshotError.message)];
   if (n === "downloading") {
     const sn = s.node.snapshot;
     const pct = sn && sn.total ? Math.floor((sn.bytes / sn.total) * 100) : 0;
@@ -95,7 +117,9 @@ function verdict(s) {
     return [noEth ? "warning" : "unknown", `Setting up your Starknet node (${pct}%)`,
       "Downloading a recent copy of Starknet. This takes a few hours, depending on your internet connection." + (noEth ? " Install an Ethereum node meanwhile (see below)." : "")];
   }
-  if (n !== "synced") return ["unknown", "Your Starknet node is catching up", "This can take a while. You can already set up your validator below."];
+  if (n !== "synced") return ["unknown", "Your Starknet node is catching up", v.state === "notSetUp"
+    ? "This can take a while. You can already set up your validator below."
+    : "This can take a while. Your validator starts by itself when the node is up to date."];
   if (v.state === "problem") return ["warning", "Your validator needs attention", PROBLEMS[v.problem] || "See “Your validator” below."];
   if (v.account && v.account.staked === false) return ["warning", "Your validator is not staked yet", PROBLEMS.notStaked];
   if (v.account && v.account.deployed === false) return ["warning", "Your attestation account is not on Starknet yet", PROBLEMS.accountMissing];
@@ -128,6 +152,10 @@ function render(s) {
     $("sync-bar").style.width = `${Math.floor((s.node.block / s.node.highest) * 100)}%`;
   }
 
+  const done = s.node.state === "synced";
+  $("step-1-state").textContent = done ? "✓ Done" : `Now: ${nodeText(s)}.`;
+  $("step-1-state").classList.toggle("ok", done);
+
   const sn = s.node.snapshot;
   show("fast-start", s.node.state === "downloading");
   if (sn) {
@@ -140,7 +168,10 @@ function render(s) {
     $("fast-bar").style.width = `${pct}%`;
   }
   show("fast-failed", s.node.state === "downloadFailed");
-  if (s.node.snapshotError) $("fast-failed-text").textContent = s.node.snapshotError.message;
+  if (s.node.snapshotError) {
+    $("fast-failed-text").textContent = downloadProblem(s.node.snapshotError.message);
+    $("fast-failed-detail").textContent = `Details for support: ${s.node.snapshotError.message}`;
+  }
   // also while the fast start downloads: the node can only start once an Ethereum node is there
   show("need-eth", s.node.state === "waitingForEthereum" || !s.ethereum.using);
 

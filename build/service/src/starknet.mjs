@@ -82,7 +82,7 @@ export class StarknetBox {
       stopTimeoutMs: 120000,
       build: () => {
         const eth = this.ethNodeArgs();
-        if (!eth) return null;
+        if (!eth || !this.l1Ready()) return null;
         this.junoStartUrl = this.l1.url;
         return {
           cmd: junoBin,
@@ -144,6 +144,18 @@ export class StarknetBox {
     return ["--eth-node", this.l1.url];
   }
 
+  /**
+   * True when Juno can use the Ethereum node now: the owner's own node, or one on this AVADO that has
+   * finished syncing. Juno 0.17 with --prune-mode stops at once ("finalized block not found") while the
+   * Ethereum node is still syncing, so it waits instead of restarting in a loop.
+   */
+  l1Ready() {
+    if (!this.l1.url) return false;
+    if (this.settings.l1 === "custom") return true;
+    const st = this.l1.client ? this.l1.states.find((x) => x.id === this.l1.client.id) : null;
+    return !!(st && st.answering && st.synced === true);
+  }
+
   saveSettings(patch) {
     this.settings = { ...this.settings, ...patch };
     writeJsonFile(this.settingsPath, this.settings);
@@ -169,6 +181,7 @@ export class StarknetBox {
   async refreshJuno() {
     if (!this.junoProc.running) {
       this.juno.synced = false;
+      this.juno.answering = false;
       return;
     }
     try {
@@ -299,7 +312,7 @@ export class StarknetBox {
       if (this.junoProc.running && this.junoStartUrl !== this.l1.url) {
         this.log(`Ethereum node changed, restarting Juno`);
         await this.junoProc.restart();
-      } else if (!this.junoProc.running && this.ethNodeArgs()) {
+      } else if (!this.junoProc.running && this.l1Ready()) {
         this.junoProc.start();
       }
 
@@ -389,6 +402,8 @@ export class StarknetBox {
     rmSync(this.junoDir, { recursive: true, force: true });
     this.juno = { synced: false, block: null, highest: null, version: null, checkedAt: null, everSynced: false };
     this.snapshotError = null;
+    // "Start over" promises a fresh copy, also after the owner once chose to sync from the first block
+    this.saveSettings({ fastSync: true });
     this.tick();
   }
 
@@ -404,6 +419,9 @@ export class StarknetBox {
     if (snap) node = "downloading";
     else if (this.snapshotError && databaseIsEmpty(this.junoDir) && this.settings.fastSync) node = "downloadFailed";
     else if (!this.junoProc.running && !this.ethNodeArgs()) node = "waitingForEthereum";
+    else if (!this.junoProc.running && !this.l1Ready()) node = "waitingForEthereumSync";
+    // it stopped three times in a row: say so instead of "starting" for ever
+    else if (this.junoProc.restarts >= 3 && !this.juno.answering) node = "keepsStopping";
     else if (!this.junoProc.running) node = "starting";
     else if (!this.juno.answering) node = "starting";
     else if (this.juno.synced) node = "synced";

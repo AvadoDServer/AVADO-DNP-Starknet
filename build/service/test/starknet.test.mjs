@@ -76,7 +76,7 @@ test("an old 'none' setting falls back to automatic: Juno cannot prune without a
   assert.equal(box.ethNodeArgs(), null);
   await assert.rejects(box.setL1({ l1: "none" }), /Unknown/);
   assert.equal(box.junoProc.build(), null);
-  box.l1.url = "ws://ethchain-geth.my.ava.do:8546";
+  box.l1 = { client: { id: "geth", title: "Geth" }, url: "ws://ethchain-geth.my.ava.do:8546", states: [{ id: "geth", installed: true, answering: true, synced: true }] };
   const args = box.junoProc.build().args;
   assert.equal(args.includes("--disable-l1-verification"), false);
   assert.ok(args.includes("--prune-mode=4500"));
@@ -90,4 +90,43 @@ test("the custom Ethereum address must be a WebSocket address", async () => {
   await assert.rejects(box.setL1({ l1: "bogus" }), /Unknown/);
   await box.setL1({ l1: "custom", l1Custom: "wss://example.org/ws" });
   assert.equal(box.settings.l1Custom, "wss://example.org/ws");
+});
+
+test("Juno waits while the Ethereum node on the box is still syncing (Juno stops at once otherwise)", () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  box.l1 = { client: { id: "geth", title: "Geth" }, url: "ws://ethchain-geth.my.ava.do:8546", states: [{ id: "geth", installed: true, answering: true, synced: false, progress: 0.4 }] };
+  assert.equal(box.l1Ready(), false);
+  assert.equal(box.junoProc.build(), null);
+  assert.equal(box.status().node.state, "waitingForEthereumSync");
+  box.l1.states[0].synced = true;
+  assert.equal(box.l1Ready(), true);
+  assert.ok(box.junoProc.build().args.includes("--eth-node"));
+  assert.equal(box.status().node.state, "starting");
+  // the owner's own node is used as it is
+  box.settings.l1 = "custom";
+  box.l1 = { client: { id: "custom", title: "Your own Ethereum node" }, url: "wss://example.org", states: [] };
+  assert.equal(box.l1Ready(), true);
+});
+
+test("a node that stopped three times in a row is reported, not shown as starting", () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  box.settings.l1 = "custom";
+  box.l1 = { client: { id: "custom", title: "Your own Ethereum node" }, url: "wss://example.org", states: [] };
+  box.junoProc.restarts = 3;
+  assert.equal(box.status().node.state, "keepsStopping");
+  box.junoProc.restarts = 0;
+  assert.equal(box.status().node.state, "starting");
+});
+
+test("start over brings the fast start back, also after the owner chose to sync from the first block", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  box.tick = async () => {};
+  await box.skipFastStart();
+  assert.equal(box.settings.fastSync, false);
+  await box.startOver();
+  assert.equal(box.settings.fastSync, true);
+  assert.equal(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).fastSync, true);
 });
