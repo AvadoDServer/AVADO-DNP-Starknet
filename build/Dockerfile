@@ -16,7 +16,7 @@ ARG JUNO_IMAGE=nethermind/juno:v0.17.0@sha256:7695dc36baedc08e5e49178ad0bcb55259
 ARG VALIDATOR_IMAGE=nethermind/starknet-staking-v2:v0.3.1@sha256:e84a6dde2be025a561066e4dac96ad1acc7e261ff9d10d5fdf5446f4fac4644b
 # Same Node.js base as AVADO-DNP-Care and AVADO-DNP-Rocketpool (bookworm, glibc,
 # runs on today's AVADO boxes with Docker 20.10).
-ARG NODE_SLIM_IMAGE=node:22.23.2-bookworm-slim@sha256:48e4b67d85f87bd551df43704e24d252f56cc5f8e9718841aace50f19948f0f9
+ARG NODE_SLIM_IMAGE=node:22.23.4-bookworm-slim@sha256:4b150b48b4116e2a22f2c39cc27025fbf4f153e2078fd3b14d159fdb5c7279da
 
 FROM --platform=linux/amd64 ${JUNO_IMAGE} AS juno
 FROM --platform=linux/amd64 ${VALIDATOR_IMAGE} AS validator
