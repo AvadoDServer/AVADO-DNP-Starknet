@@ -1,0 +1,80 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, statSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { StarknetBox, explainValidatorLine, isFelt, splitOptions } from "../src/starknet.mjs";
+import { parsePrometheus } from "../src/lib/metrics.mjs";
+
+test("isFelt accepts Starknet addresses and keys, refuses junk", () => {
+  assert.equal(isFelt("0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"), true);
+  assert.equal(isFelt("0x123"), true);
+  assert.equal(isFelt("0x0"), false);
+  assert.equal(isFelt("123"), false);
+  assert.equal(isFelt("0x" + "1".repeat(65)), false);
+  assert.equal(isFelt("word word"), false);
+});
+
+test("extra options are split on spaces only", () => {
+  assert.deepEqual(splitOptions(" --log-level debug  --x=1 "), ["--log-level", "debug", "--x=1"]);
+  assert.deepEqual(splitOptions("$(rm -rf /)"), ["$(rm", "-rf", "/)"]);
+  assert.deepEqual(splitOptions(undefined), []);
+});
+
+test("validator lines become plain problems", () => {
+  assert.equal(explainValidatorLine('error: "Staker does not exist"'), "notStaked");
+  assert.equal(explainValidatorLine("Unable to get STRK balance of account 0x1: Error when calling entrypoint `balance_of`: 20 Contract not found"), "accountMissing");
+  assert.equal(explainValidatorLine("signer balance is below threshold"), "lowBalance");
+  assert.equal(explainValidatorLine("subscribed to new block header"), null);
+  // seen on v0.3.1 with Juno v0.17.0 at every start; the validator works, so it is not a problem
+  assert.equal(
+    explainValidatorLine('14:05:13.216 04/11/2026 +00:00\tWARN\tvalidator/provider_interaction.go:38\tnode implements a different JSON-RPC specification than Starknet.Go targets'),
+    null,
+  );
+});
+
+test("prometheus text is parsed", () => {
+  const m = parsePrometheus(`# HELP x\nvalidator_attestation_current_epoch_id{network="mainnet"} 14138\nvalidator_attestation_attestation_confirmed_count{network="mainnet"} 3\nbad line\n`);
+  assert.equal(m.validator_attestation_current_epoch_id, 14138);
+  assert.equal(m.validator_attestation_attestation_confirmed_count, 3);
+});
+
+test("the private key is stored with mode 600, never in status, and removed on request", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, junoBin: "/bin/false", validatorBin: "/bin/false", log: () => {} });
+  box.tick = async () => {};
+  const key = "0x" + "ab".repeat(31);
+  await assert.rejects(box.setValidator({ operationalAddress: "nope", privateKey: key }), /Starknet address/);
+  await assert.rejects(box.setValidator({ operationalAddress: "0x123", privateKey: "0x123" }), /same/);
+  await box.setValidator({ operationalAddress: "0xABC", privateKey: key, braavos: true });
+  const keyFile = join(dir, "secrets", "operational-key");
+  assert.equal(readFileSync(keyFile, "utf8").trim(), key);
+  assert.equal(statSync(keyFile).mode & 0o777, 0o600);
+  const status = JSON.stringify(box.status());
+  assert.equal(status.includes(key), false);
+  assert.equal(box.status().validator.operationalAddress, "0xabc");
+  assert.equal(box.status().validator.braavos, true);
+  await box.removeValidator();
+  assert.equal(existsSync(keyFile), false);
+  assert.equal(box.status().validator.state, "notSetUp");
+});
+
+test("Juno is not started without an Ethereum node, unless the owner chose none", () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  assert.equal(box.ethNodeArgs(), null);
+  box.l1.url = "ws://ethchain-geth.my.ava.do:8546";
+  assert.deepEqual(box.ethNodeArgs(), ["--eth-node", "ws://ethchain-geth.my.ava.do:8546"]);
+  box.settings.l1 = "none";
+  assert.deepEqual(box.ethNodeArgs(), ["--disable-l1-verification"]);
+});
+
+test("the custom Ethereum address must be a WebSocket address", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  box.tick = async () => {};
+  await assert.rejects(box.setL1({ l1: "custom", l1Custom: "http://x:8545" }), /WebSocket/);
+  await assert.rejects(box.setL1({ l1: "bogus" }), /Unknown/);
+  await box.setL1({ l1: "custom", l1Custom: "wss://example.org/ws" });
+  assert.equal(box.settings.l1Custom, "wss://example.org/ws");
+});

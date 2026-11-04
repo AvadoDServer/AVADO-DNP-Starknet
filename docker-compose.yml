@@ -1,0 +1,15 @@
+version: '3.4'
+services:
+  starknet.avado.dnp.dappnode.eth:
+    image: 'starknet.avado.dnp.dappnode.eth:0.1.0'
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+    volumes:
+      - 'starknet:/data'
+    environment:
+      - JUNO_EXTRA_OPTS=
+      - VALIDATOR_EXTRA_OPTS=
+    restart: always
+volumes:
+  starknet: {}

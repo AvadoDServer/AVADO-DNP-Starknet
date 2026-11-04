@@ -1,0 +1,19 @@
+AVADO Starknet Validator package
+Copyright (C) 2026 AVADO. Licensed under the GNU General Public License v3.0 (see LICENSE).
+
+This image contains, unmodified, the following programs by Nethermind:
+
+- Juno (https://github.com/NethermindEth/juno), Apache License 2.0,
+  copied from the nethermind/juno Docker image.
+- starknet-staking-v2 validator (https://github.com/NethermindEth/starknet-staking-v2),
+  Apache License 2.0, copied from the nethermind/starknet-staking-v2 Docker image.
+
+The fast start downloads the database copy that the Juno team publishes at
+https://juno-snapshots.nethermind.io (see https://juno.nethermind.io/snapshots).
+
+The page styles (theme.css, base.css, style.css) come from the AVADO Admin,
+AVADO Care and AVADO AI Connect pages.
+
+DAppNode's Starknet packages (DAppNodePackage-juno-generic and
+DAppNodePackage-starknetstaking-generic) were read as a reference for how the
+two programs are configured; no code or files were copied from them.
