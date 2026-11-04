@@ -80,6 +80,9 @@ export class StarknetBox {
     this.junoProc = new Supervised({
       name: "juno",
       stopTimeoutMs: 120000,
+      // Juno 0.17.0 briefly opens a "migration status" server on its RPC port at every start; now and
+      // then its RPC server then finds the port taken and Juno stops at once. Starting again fixes it.
+      quickRetry: /bind: address already in use/,
       build: () => {
         const eth = this.ethNodeArgs();
         if (!eth || !this.l1Ready()) return null;

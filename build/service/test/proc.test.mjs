@@ -30,3 +30,34 @@ test("supervised program: build() returning null means do not start", () => {
   assert.equal(p.running, false);
   assert.equal(p.wanted, false);
 });
+
+test("supervised program: a known start-up hiccup is retried after 1 s without counting as a failure", async () => {
+  let runs = 0;
+  const p = new Supervised({
+    name: "t",
+    quickRetry: /address already in use/,
+    build: () => {
+      runs += 1;
+      const script = runs < 3 ? "console.log('listen tcp 0.0.0.0:6060: bind: address already in use')" : "setInterval(() => {}, 1000)";
+      return { cmd: process.execPath, args: ["-e", script], env: {} };
+    },
+  });
+  p.start();
+  await new Promise((r) => setTimeout(r, 3500));
+  assert.equal(runs, 3);
+  assert.equal(p.running, true);
+  assert.equal(p.restarts, 0);
+  await p.stop();
+});
+
+test("supervised program: other stops still count and back off", async () => {
+  const p = new Supervised({
+    name: "t",
+    quickRetry: /address already in use/,
+    build: () => ({ cmd: process.execPath, args: ["-e", "console.log('some other error')"], env: {} }),
+  });
+  p.start();
+  await new Promise((r) => setTimeout(r, 800));
+  assert.equal(p.restarts, 1);
+  await p.stop();
+});

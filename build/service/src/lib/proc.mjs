@@ -20,11 +20,16 @@ export class Supervised {
   /**
    * name: short label for logs; build(): {cmd, args, env} or null when it must not run now
    * onLine(line): optional hook for every output line (already redacted)
+   * quickRetry: optional pattern of a known start-up hiccup; a run that printed it and stopped within
+   *   30 s is started again after 1 s without counting as a failure (at most 5 times in a row)
    */
-  constructor({ name, build, onLine, secrets = () => [], stopSignal = "SIGTERM", stopTimeoutMs = 60000 }) {
+  constructor({ name, build, onLine, quickRetry = null, secrets = () => [], stopSignal = "SIGTERM", stopTimeoutMs = 60000 }) {
     this.name = name;
     this.build = build;
     this.onLine = onLine;
+    this.quickRetry = quickRetry;
+    this.quickRetries = 0;
+    this.sawHiccup = false;
     this.secrets = secrets;
     this.stopSignal = stopSignal;
     this.stopTimeoutMs = stopTimeoutMs;
@@ -47,6 +52,7 @@ export class Supervised {
     if (this.lines.length > KEEP_LINES) this.lines.splice(0, this.lines.length - KEEP_LINES);
     process.stdout.write(`[${this.name}] ${clean}\n`);
     if (this.onLine) this.onLine(clean);
+    if (this.quickRetry && this.quickRetry.test(clean)) this.sawHiccup = true;
   }
 
   start() {
@@ -59,6 +65,7 @@ export class Supervised {
     }
     const child = spawn(spec.cmd, spec.args, { env: spec.env, stdio: ["ignore", "pipe", "pipe"] });
     this.child = child;
+    this.sawHiccup = false;
     this.startedAt = Date.now();
     for (const stream of [child.stdout, child.stderr]) {
       let rest = "";
@@ -78,9 +85,16 @@ export class Supervised {
       this.lastExit = { code, signal, at: Date.now() };
       if (!this.wanted) return;
       const ranFor = Date.now() - (this.startedAt || 0);
-      if (ranFor > 10 * 60 * 1000) this.restarts = 0;
-      this.restarts += 1;
-      const pause = Math.min(5000 * 2 ** Math.min(this.restarts - 1, 5), 160000);
+      let pause;
+      if (this.sawHiccup && ranFor < 30000 && this.quickRetries < 5) {
+        this.quickRetries += 1;
+        pause = 1000;
+      } else {
+        this.quickRetries = 0;
+        if (ranFor > 10 * 60 * 1000) this.restarts = 0;
+        this.restarts += 1;
+        pause = Math.min(5000 * 2 ** Math.min(this.restarts - 1, 5), 160000);
+      }
       this.push(`stopped (code ${code ?? "-"}${signal ? `, ${signal}` : ""}); starting again in ${Math.round(pause / 1000)} s`);
       this.timer = setTimeout(() => {
         this.timer = null;
