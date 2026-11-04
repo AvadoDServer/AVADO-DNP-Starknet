@@ -43,8 +43,8 @@ allow-list (DNS rebinding) and a same-origin check plus a custom header on every
 ## Requirements
 
 - Geth, Nethermind or Reth on mainnet on the same AVADO (synced). Without one, the page says
-  "Install an Ethereum node first"; advanced owners can point it at another Ethereum node or,
-  not recommended, at none.
+  "Install an Ethereum node first"; advanced owners can point it at another Ethereum node. There
+  is no "no Ethereum node" choice: Juno refuses `--prune-mode` without L1 verification.
 - About 200 GB of free disk space (pruned copy plus growth). 4 CPU cores and 8 GB RAM are plenty.
 - Docker 20.10.10+ on the host (bookworm base image, like AVADO Care and Rocket Pool).
 

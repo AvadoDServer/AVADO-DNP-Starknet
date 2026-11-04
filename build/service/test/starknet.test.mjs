@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, statSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, statSync, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { StarknetBox, explainValidatorLine, isFelt, splitOptions } from "../src/starknet.mjs";
@@ -59,14 +59,27 @@ test("the private key is stored with mode 600, never in status, and removed on r
   assert.equal(box.status().validator.state, "notSetUp");
 });
 
-test("Juno is not started without an Ethereum node, unless the owner chose none", () => {
+test("Juno is not started without an Ethereum node", () => {
   const dir = mkdtempSync(join(tmpdir(), "stark-"));
   const box = new StarknetBox({ dataDir: dir, log: () => {} });
   assert.equal(box.ethNodeArgs(), null);
   box.l1.url = "ws://ethchain-geth.my.ava.do:8546";
   assert.deepEqual(box.ethNodeArgs(), ["--eth-node", "ws://ethchain-geth.my.ava.do:8546"]);
-  box.settings.l1 = "none";
-  assert.deepEqual(box.ethNodeArgs(), ["--disable-l1-verification"]);
+});
+
+test("an old 'none' setting falls back to automatic: Juno cannot prune without an Ethereum node", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  writeFileSync(join(dir, "settings.json"), JSON.stringify({ l1: "none", fastSync: true }));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  box.tick = async () => {};
+  assert.equal(box.settings.l1, "auto");
+  assert.equal(box.ethNodeArgs(), null);
+  await assert.rejects(box.setL1({ l1: "none" }), /Unknown/);
+  assert.equal(box.junoProc.build(), null);
+  box.l1.url = "ws://ethchain-geth.my.ava.do:8546";
+  const args = box.junoProc.build().args;
+  assert.equal(args.includes("--disable-l1-verification"), false);
+  assert.ok(args.includes("--prune-mode=4500"));
 });
 
 test("the custom Ethereum address must be a WebSocket address", async () => {

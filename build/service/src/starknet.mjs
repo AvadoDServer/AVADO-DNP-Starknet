@@ -64,6 +64,8 @@ export class StarknetBox {
     this.fetch = fetchImpl;
     mkdirSync(dataDir, { recursive: true });
     this.settings = { ...DEFAULT_SETTINGS, ...readJsonFile(this.settingsPath, {}) };
+    // "none" (no Ethereum check) was offered by an early test build; Juno refuses to prune without it
+    if (!["auto", "custom", ...EXECUTION_CLIENTS.map((c) => c.id)].includes(this.settings.l1)) this.settings.l1 = "auto";
     this.validatorConfig = readJsonFile(this.validatorPath, null);
     this.l1 = { client: null, url: null, states: [], checkedAt: null };
     this.juno = { synced: false, block: null, highest: null, version: null, checkedAt: null, everSynced: false };
@@ -138,7 +140,6 @@ export class StarknetBox {
 
   /** Juno's L1 arguments, or null when there is no Ethereum node to use yet. */
   ethNodeArgs() {
-    if (this.settings.l1 === "none") return ["--disable-l1-verification"];
     if (!this.l1.url) return null;
     return ["--eth-node", this.l1.url];
   }
@@ -150,10 +151,6 @@ export class StarknetBox {
 
   async refreshL1() {
     const s = this.settings;
-    if (s.l1 === "none") {
-      this.l1 = { client: null, url: null, states: [], checkedAt: Date.now() };
-      return;
-    }
     if (s.l1 === "custom") {
       this.l1 = { client: { id: "custom", title: "Your own Ethereum node" }, url: s.l1Custom || null, states: [], checkedAt: Date.now() };
       return;
@@ -299,8 +296,7 @@ export class StarknetBox {
       }
       if (!existsSync(this.junoDir)) mkdirSync(this.junoDir, { recursive: true });
 
-      const wantUrl = this.settings.l1 === "none" ? null : this.l1.url;
-      if (this.junoProc.running && this.junoStartUrl !== wantUrl) {
+      if (this.junoProc.running && this.junoStartUrl !== this.l1.url) {
         this.log(`Ethereum node changed, restarting Juno`);
         await this.junoProc.restart();
       } else if (!this.junoProc.running && this.ethNodeArgs()) {
@@ -360,7 +356,8 @@ export class StarknetBox {
   }
 
   async setL1({ l1, l1Custom }) {
-    const allowed = ["auto", "none", "custom", ...EXECUTION_CLIENTS.map((c) => c.id)];
+    // Juno always checks against an Ethereum node: its pruning (which keeps the database small) needs it
+    const allowed = ["auto", "custom", ...EXECUTION_CLIENTS.map((c) => c.id)];
     if (!allowed.includes(l1)) throw Object.assign(new Error("Unknown choice"), { status: 400 });
     if (l1 === "custom" && !/^wss?:\/\/[^\s]+$/.test(l1Custom || "")) {
       throw Object.assign(new Error("Enter a WebSocket address that starts with ws:// or wss://"), { status: 400 });
@@ -434,7 +431,7 @@ export class StarknetBox {
         choice: this.settings.l1,
         custom: this.settings.l1Custom,
         using: this.l1.client,
-        url: this.settings.l1 === "none" ? null : this.l1.url,
+        url: this.l1.url,
         clients: this.l1.states,
       },
       validator: {
