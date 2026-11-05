@@ -27,7 +27,7 @@
 
       <p class="notice" id="page-error" hidden></p>
 
-      <section class="card">
+      <section class="card" id="facts">
         <dl class="facts">
           <div><dt>Starknet node</dt><dd id="f-node">…</dd></div>
           <div><dt>Ethereum node it checks against</dt><dd id="f-eth">…</dd></div>
@@ -69,13 +69,13 @@
       <section class="card attention" id="need-eth" hidden>
         <h2>Install an Ethereum node first</h2>
         <p>
-          Starknet records its progress on Ethereum. To be sure it follows the real Starknet, your Starknet node checks every step against an
-          Ethereum node, and it uses the one on this AVADO. No Ethereum node was found.
+          Your Starknet node checks its work against Ethereum, so it needs an Ethereum node on this AVADO. Install
+          <strong>Geth</strong> or <strong>Nethermind</strong> from the store. If you stake ETH on this box, you already have one.
         </p>
-        <p class="muted" data-mt="sm">
-          Install <strong>Geth</strong> or <strong>Nethermind</strong> from the AVADO store (if you stake ETH on this box, you already have one).
-          The Starknet node starts by itself as soon as it finds it.
-        </p>
+        <p class="muted small" data-mt="sm">Your Starknet node starts by itself once it finds one. Nothing downloads before that.</p>
+        <div class="actions" data-mt="md">
+          <a class="button" href="http://my.ava.do/#/installer" target="_top">Open the store</a>
+        </div>
       </section>
 
       <!-- validator: not set up -->

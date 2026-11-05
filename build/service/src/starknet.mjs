@@ -312,6 +312,9 @@ export class StarknetBox {
       if (this.snapshot) return;
       const empty = databaseIsEmpty(this.junoDir);
       if (empty && this.settings.fastSync && !this.junoProc.running) {
+        // Juno cannot run without an Ethereum node: the large download (about 100 GB) waits until
+        // one is found on the box or the owner sets their own
+        if (!this.l1.url) return;
         // after a failure, try again at most every 30 minutes
         if (!this.snapshotError || Date.now() - this.snapshotError.at > 30 * 60 * 1000) this.startSnapshot();
         return;

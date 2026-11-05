@@ -162,3 +162,34 @@ test("start over brings the fast start back, also after the owner chose to sync 
   assert.equal(box.settings.fastSync, true);
   assert.equal(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).fastSync, true);
 });
+
+test("with no Ethereum node the large download and Juno wait; they start once one is found", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, junoBin: "/bin/false", log: () => {} });
+  let snapshots = 0;
+  box.startSnapshot = () => { snapshots++; box.snapshot = { status: () => ({}) }; };
+  const none = { client: null, url: null, states: [{ id: "geth", installed: false }], checkedAt: Date.now() };
+  box.refreshL1 = async () => { box.l1 = none; };
+  await box.tick();
+  await box.tick();
+  assert.equal(snapshots, 0);
+  assert.equal(box.junoProc.running, false);
+  assert.equal(box.status().node.state, "waitingForEthereum");
+  // Geth installed (still syncing): the download may start, Juno still waits for it
+  box.refreshL1 = async () => {
+    box.l1 = { client: { id: "geth", title: "Geth" }, url: "ws://ethchain-geth.my.ava.do:8546", states: [{ id: "geth", installed: true, answering: true, synced: false }], checkedAt: Date.now() };
+  };
+  await box.tick();
+  assert.equal(snapshots, 1);
+  assert.equal(box.junoProc.running, false);
+});
+
+test("the owner's own Ethereum node also lets the download start", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "stark-"));
+  const box = new StarknetBox({ dataDir: dir, log: () => {} });
+  let snapshots = 0;
+  box.startSnapshot = () => { snapshots++; box.snapshot = { status: () => ({}) }; };
+  box.saveSettings({ l1: "custom", l1Custom: "wss://example.org/ws" });
+  await box.tick();
+  assert.equal(snapshots, 1);
+});

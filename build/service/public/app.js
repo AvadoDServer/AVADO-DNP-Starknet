@@ -100,7 +100,7 @@ function validatorText(s) {
 function verdict(s) {
   const n = s.node.state;
   const v = s.validator;
-  if (n === "waitingForEthereum") return ["warning", "Install an Ethereum node first", "Your Starknet node needs Geth or Nethermind on this AVADO."];
+  if (n === "waitingForEthereum") return ["warning", "Starknet needs an Ethereum node", "Install one from the store, then come back. Nothing downloads until then."];
   if (n === "waitingForEthereumSync") {
     const title = s.ethereum.using ? s.ethereum.using.title : "Your Ethereum node";
     const st = (s.ethereum.clients || []).find((c) => s.ethereum.using && c.id === s.ethereum.using.id);
@@ -174,11 +174,14 @@ function render(s) {
   }
   // also while the fast start downloads: the node can only start once an Ethereum node is there
   show("need-eth", s.node.state === "waitingForEthereum" || !s.ethereum.using);
+  // waiting for an Ethereum node: that is the one thing to do, so the page shows only that
+  const waiting = s.node.state === "waitingForEthereum";
+  show("facts", !waiting);
 
   const v = s.validator;
   const editing = $("v-setup").dataset.editing === "1";
-  show("v-setup", v.state === "notSetUp" || editing);
-  show("v-running", v.state !== "notSetUp" && !editing);
+  show("v-setup", !waiting && (v.state === "notSetUp" || editing));
+  show("v-running", !waiting && v.state !== "notSetUp" && !editing);
   if (v.state !== "notSetUp") {
     $("v-addr").textContent = v.operationalAddress;
     const a = v.account;
