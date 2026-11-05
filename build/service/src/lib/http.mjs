@@ -19,7 +19,7 @@ const TYPES = {
   ".json": "application/json; charset=utf-8",
 };
 
-/** Host names the page answers to: IP literals, localhost, and the package's own names on :80. */
+/** Host names the page answers to: IP literals, localhost, and the package's own names on :80 or :443. */
 export function isAllowedHost(hostHeader, allowedNames) {
   if (!hostHeader) return false;
   const host = String(hostHeader).trim().toLowerCase();
@@ -31,7 +31,7 @@ export function isAllowedHost(hostHeader, allowedNames) {
   const port = m[2];
   if (isIPv4(name) || name === "localhost") return true;
   if (!allowedNames.includes(name)) return false;
-  return port === undefined || port === "80";
+  return port === undefined || port === "80" || port === "443";
 }
 
 function sameHost(value, host) {
@@ -110,8 +110,14 @@ export const CSP =
  * A handler returns a JSON value, or throws HttpError for a plain-language error.
  * Files are served only from publicDir and only with a known extension.
  */
-export function createPageServer({ publicDir, routes, allowedNames, log = () => {} }) {
-  return createServer(async (req, res) => {
+/** The page's http server (port 80). */
+export function createPageServer(opts) {
+  return createServer(createPageHandler(opts));
+}
+
+/** The page's request handler, for http and for https (lib/https.mjs). */
+export function createPageHandler({ publicDir, routes, allowedNames, log = () => {} }) {
+  return async (req, res) => {
     try {
       const url = new URL(req.url || "/", "http://localhost");
       if (url.pathname.startsWith("/api/")) {
@@ -140,5 +146,5 @@ export function createPageServer({ publicDir, routes, allowedNames, log = () => 
       log(`page error: ${err && err.stack ? err.stack : err}`);
       return sendJson(res, 500, { error: "Something went wrong on the box. Please try again." });
     }
-  });
+  };
 }

@@ -1,6 +1,6 @@
 {
   "name": "starknet.avado.dnp.dappnode.eth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "upstream": "juno v0.17.0, starknet-staking-v2 v0.3.1",
   "title": "Starknet Validator",
   "description": "Run your own Starknet node and earn STRK as a Starknet validator. The node (Juno) checks Starknet against the Ethereum node on your AVADO, and a fast start downloads a recent copy so it is ready in hours instead of weeks. To validate you stake at least 20,000 STRK from your own wallet; the box only keeps the key of a small separate account that signs attestations and pays their tiny fees. The page explains every step in plain words and shows whether your validator is attesting. Needs Geth or Nethermind on this AVADO and about 200 GB of free disk space.",
