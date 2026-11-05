@@ -1,0 +1,58 @@
+{
+  "title": "Starknet Validator",
+  "components": [
+    {
+      "name": "Juno",
+      "github": "NethermindEth/juno",
+      "images": [
+        {
+          "var": "juno",
+          "ref": "nethermind/juno:v{version}"
+        }
+      ],
+      "caution": "The attestation tool accepts only some Juno RPC spec versions (v0.3.1: 0.10.2 and 0.10.3). Check on the test box that the validator still connects.",
+      "pins": [
+        {
+          "file": "build/Dockerfile",
+          "text": "ARG JUNO_IMAGE=nethermind/juno:v{version}@sha256:{juno}"
+        },
+        {
+          "file": "dappnode_package.json",
+          "text": "\"upstream\": \"juno v{version},"
+        },
+        {
+          "file": "README.md",
+          "text": "Starknet node, v{version})",
+          "optional": true
+        }
+      ]
+    },
+    {
+      "name": "starknet-staking-v2",
+      "github": "NethermindEth/starknet-staking-v2",
+      "source": "tags",
+      "images": [
+        {
+          "var": "validator",
+          "ref": "nethermind/starknet-staking-v2:v{version}"
+        }
+      ],
+      "caution": "Nethermind sometimes tags this tool without a GitHub release, so the link goes to the tag. Check the commits since the last version.",
+      "pins": [
+        {
+          "file": "build/Dockerfile",
+          "text": "ARG VALIDATOR_IMAGE=nethermind/starknet-staking-v2:v{version}@sha256:{validator}"
+        },
+        {
+          "file": "dappnode_package.json",
+          "text": "starknet-staking-v2 v{version}\""
+        },
+        {
+          "file": "README.md",
+          "text": "(`starknet-staking-v2` v{version})",
+          "optional": true
+        }
+      ]
+    }
+  ]
+}

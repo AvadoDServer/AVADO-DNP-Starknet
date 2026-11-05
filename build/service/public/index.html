@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AVADO Starknet Validator</title>
+    <link rel="icon" href="/favicon.png" />
+    <link rel="stylesheet" href="/theme.css" />
+    <link rel="stylesheet" href="/base.css" />
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="top">
+        <span class="brand">AVADO <strong>Starknet Validator</strong></span>
+        <span class="version" id="version"></span>
+      </header>
+
+      <section class="card verdict" id="verdict" data-level="unknown" aria-live="polite">
+        <span class="dot"></span>
+        <div>
+          <h1 id="headline">Checking your Starknet node…</h1>
+          <p id="subline"></p>
+        </div>
+      </section>
+
+      <p class="notice" id="page-error" hidden></p>
+
+      <section class="card" id="facts">
+        <dl class="facts">
+          <div><dt>Starknet node</dt><dd id="f-node">…</dd></div>
+          <div><dt>Ethereum node it checks against</dt><dd id="f-eth">…</dd></div>
+          <div><dt>Validator</dt><dd id="f-validator">…</dd></div>
+          <div><dt>Free disk space</dt><dd id="f-disk">…</dd></div>
+        </dl>
+        <div id="sync-progress" hidden>
+          <p class="muted small" id="sync-text"></p>
+          <div class="bar"><span id="sync-bar"></span></div>
+        </div>
+      </section>
+
+      <!-- fast start -->
+      <section class="card" id="fast-start" hidden>
+        <h2>Fast start: downloading a recent copy of Starknet</h2>
+        <p class="muted">
+          Instead of replaying Starknet from its first block (which takes weeks), the box downloads a recent copy that the Juno team publishes,
+          then catches up the last few days by itself. The copy is unpacked while it downloads.
+        </p>
+        <p id="fast-text" class="small"></p>
+        <div class="bar"><span id="fast-bar"></span></div>
+        <div class="actions" data-mt="md">
+          <button type="button" class="button ghost small" id="fast-skip">Sync from the first block instead</button>
+        </div>
+      </section>
+
+      <section class="card attention" id="fast-failed" hidden>
+        <h2>The fast start download stopped</h2>
+        <p id="fast-failed-text"></p>
+        <p class="muted small">The box tries again by itself every 30 minutes.</p>
+        <p class="muted small" id="fast-failed-detail"></p>
+        <div class="actions" data-mt="md">
+          <button type="button" class="button" id="fast-retry">Try again now</button>
+          <button type="button" class="button ghost" id="fast-skip2">Sync from the first block instead</button>
+        </div>
+      </section>
+
+      <!-- no Ethereum node -->
+      <section class="card attention" id="need-eth" hidden>
+        <h2>Install an Ethereum node first</h2>
+        <p>
+          Your Starknet node checks its work against Ethereum, so it needs an Ethereum node on this AVADO. Install
+          <strong>Geth</strong> or <strong>Nethermind</strong> from the store. If you stake ETH on this box, you already have one.
+        </p>
+        <p class="muted small" data-mt="sm">Your Starknet node starts by itself once it finds one. Nothing downloads before that.</p>
+        <div class="actions" data-mt="md">
+          <a class="button" href="http://my.ava.do/#/installer" target="_top">Open the store</a>
+        </div>
+      </section>
+
+      <!-- validator: not set up -->
+      <section class="card" id="v-setup" hidden>
+        <h2>Become a Starknet validator</h2>
+        <p class="lead">
+          Your box can earn STRK rewards by confirming, about once an hour, that it sees the latest Starknet blocks (an “attestation”).
+        </p>
+        <p data-mt="sm">
+          You need at least <strong>20,000 STRK</strong> of your own. It stays in your own wallet: the box only keeps the key of a small, separate
+          account that signs the attestations.
+        </p>
+        <details class="more">
+          <summary>Before you stake: how it works</summary>
+          <ul class="never" data-mt="sm">
+            <li>You need at least <strong>20,000 STRK</strong> of your own to stake. It stays under the control of your own wallet. This box never sees that wallet or its key.</li>
+            <li>The box signs attestations with a <strong>separate, small account</strong> that only pays the tiny fees (Starknet calls it the “operational account”). That is the only key the box keeps.</li>
+            <li>Rewards go to a reward address in your own wallet. If the box misses an attestation, you get no reward for that hour.</li>
+            <li>Getting your stake back takes 7 days after you ask for it.</li>
+          </ul>
+          <p class="small" data-mt="md"><strong>Not enough STRK? About delegation</strong></p>
+          <p class="small" data-mt="sm">
+            The 20,000 STRK must be your own. StarkWare's delegation programme adds millions of STRK to a few validators, but it is meant for
+            professional operators: you must already run a validator, show 99% uptime for three months on Starknet and its test network, pass a
+            compliance check and apply in a short window. It promises nothing. Once your validator runs, other STRK holders can also delegate
+            their STRK to you if you open your validator for delegation (a "pool") on the staking page of your wallet. See
+            <a href="https://starkware.co/starkware-delegation-program/" target="_blank" rel="noopener">StarkWare's delegation programme</a>.
+          </p>
+        </details>
+
+        <h2 data-mt="lg">Set it up in four steps</h2>
+        <ol class="steps">
+          <li><strong>Wait until the Starknet node is up to date.</strong> The status at the top of this page turns green. <span class="tick" id="step-1-state"></span></li>
+          <li>
+            <strong>Make a new account for attestations</strong> in your Starknet wallet (Ready, formerly Argent, or Braavos). Send it about
+            <strong>100 STRK</strong> for fees and make one transaction with it so the wallet deploys it. Do not switch on extra protection for this
+            account (a Guardian, two-factor or a hardware signer): the box must be able to sign on its own.
+          </li>
+          <li>
+            <strong>Stake from your main account:</strong> at least 20,000 STRK, with the new account as the operational address and an address of
+            yours for rewards. Follow the
+            <a href="https://docs.starknet.io/secure/quickstart/becoming-a-validator/" target="_blank" rel="noopener">Starknet validator guide</a>
+            (steps “approve” and “stake”).
+          </li>
+          <li><strong>Enter the new account below:</strong> its address and its private key (in your wallet's settings, “Export private key”).</li>
+        </ol>
+
+        <form class="form" id="v-form" autocomplete="off">
+          <label class="field">
+            <span>Attestation account address</span>
+            <input type="text" id="v-address" placeholder="0x…" spellcheck="false" required />
+          </label>
+          <label class="field">
+            <span>Its private key</span>
+            <input type="password" id="v-key" placeholder="0x…" spellcheck="false" autocomplete="new-password" required />
+          </label>
+          <label class="check">
+            <input type="checkbox" id="v-braavos" />
+            <span>This is a Braavos account</span>
+          </label>
+          <p class="muted small">
+            Only enter the key of the small attestation account, never the key or recovery phrase of the account that holds your stake. The key is
+            stored on this box only, is never shown again, and is used for nothing but attestations.
+          </p>
+          <div class="actions">
+            <button type="submit" class="button" id="v-save">Save and start</button>
+            <span class="muted" id="v-msg" role="status"></span>
+          </div>
+        </form>
+      </section>
+
+      <!-- validator: set up -->
+      <section class="card" id="v-running" hidden>
+        <h2>Your validator</h2>
+        <p class="notice" id="v-problem" hidden></p>
+        <dl class="facts">
+          <div><dt>Attestation account</dt><dd><code id="v-addr"></code></dd></div>
+          <div><dt>Linked stake</dt><dd id="v-stake">…</dd></div>
+          <div><dt>STRK for fees</dt><dd id="v-strk">…</dd></div>
+          <div><dt>Last attestation</dt><dd id="v-last">…</dd></div>
+          <div><dt>Attestations since the last start</dt><dd id="v-count">…</dd></div>
+          <div><dt>Current epoch</dt><dd id="v-epoch">…</dd></div>
+        </dl>
+        <div class="actions">
+          <button type="button" class="button ghost small" id="v-change">Use a different account</button>
+          <button type="button" class="button ghost small" id="v-remove">Stop and remove the key</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <details class="more" id="more-options">
+        <summary>More options</summary>
+        <form class="form" id="eth-form" data-mt="md">
+          <label class="field">
+            <span>Ethereum node to check against</span>
+            <select id="eth-choice">
+              <option value="auto">Automatic (the one on this AVADO)</option>
+              <option value="geth">Geth on this AVADO</option>
+              <option value="nethermind">Nethermind on this AVADO</option>
+              <option value="reth">Reth on this AVADO</option>
+              <option value="custom">Another Ethereum node (advanced)</option>
+            </select>
+          </label>
+          <label class="field" id="eth-custom-field" hidden>
+            <span>WebSocket address of that node</span>
+            <input type="text" id="eth-custom" placeholder="ws://…" spellcheck="false" />
+          </label>
+          <div class="actions">
+            <button type="submit" class="button small">Save</button>
+            <span class="muted" id="eth-msg" role="status"></span>
+          </div>
+        </form>
+
+        <details class="more">
+          <summary>Use this node from your wallet</summary>
+          <p class="small" data-mt="sm">
+            Wallets and apps on a device connected to your AVADO (AVADO WiFi or Remote Access) can use your own Starknet node instead of a public one:
+          </p>
+          <div class="copyrow" data-mt="sm"><code>http://starknet.my.ava.do:6060/v0_10</code></div>
+        </details>
+
+        <details class="more">
+          <summary>Start over</summary>
+          <p class="small" data-mt="sm">
+            Removes the Starknet database on this box and downloads a fresh copy. Only needed if support asks for it. Your attestation account stays
+            set up. Type <strong>START OVER</strong> to confirm.
+          </p>
+          <form class="form" id="over-form">
+            <label class="field"><input type="text" id="over-confirm" spellcheck="false" autocomplete="off" /></label>
+            <div class="actions">
+              <button type="submit" class="button danger small">Start over</button>
+              <button type="button" class="button ghost small" id="node-restart">Only restart the node</button>
+              <span class="muted" id="over-msg" role="status"></span>
+            </div>
+          </form>
+        </details>
+        </details>
+      </section>
+
+      <section class="card">
+        <h2>Details for support</h2>
+        <details class="more">
+          <summary>Starknet node log</summary>
+          <pre class="logs" id="log-node"></pre>
+        </details>
+        <details class="more">
+          <summary>Validator log</summary>
+          <pre class="logs" id="log-validator"></pre>
+        </details>
+        <p class="muted small" data-mt="md">
+          Runs <a href="https://github.com/NethermindEth/juno" target="_blank" rel="noopener">Juno</a> and the
+          <a href="https://github.com/NethermindEth/starknet-staking-v2" target="_blank" rel="noopener">Starknet staking validator</a>, both made by
+          Nethermind. <span id="juno-version"></span>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
