@@ -26,5 +26,6 @@
     "OnboardingWizard": "http://starknet.my.ava.do",
     "Starknet RPC endpoint": "http://starknet.my.ava.do:6060/v0_10",
     "HomePage": "https://www.starknet.io/staking/"
-  }
+  },
+  "avatar": "/ipfs/QmUjtFAZwShQDcXqHPm6dN2shyycGxMyP9dsUNteHGu34M"
 }
