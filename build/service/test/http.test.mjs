@@ -7,6 +7,7 @@ const names = ["starknet.my.ava.do"];
 test("host allow-list: own name, IPs and localhost only", () => {
   assert.equal(isAllowedHost("starknet.my.ava.do", names), true);
   assert.equal(isAllowedHost("starknet.my.ava.do:80", names), true);
+  assert.equal(isAllowedHost("starknet.my.ava.do:443", names), true);
   assert.equal(isAllowedHost("starknet.my.ava.do:8080", names), false);
   assert.equal(isAllowedHost("172.33.0.5", names), true);
   assert.equal(isAllowedHost("localhost:3000", names), true);

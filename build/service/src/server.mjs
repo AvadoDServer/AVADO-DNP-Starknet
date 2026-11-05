@@ -1,12 +1,14 @@
 // Entry point of the Starknet Validator package: the page on port 80 and the
 // programs it looks after (Juno, the attestation tool).
 import { readFileSync } from "node:fs";
-import { createPageServer, HttpError } from "./lib/http.mjs";
+import { createPageHandler, createPageServer, HttpError } from "./lib/http.mjs";
+import { serveHttps } from "./lib/https.mjs";
 import { StarknetBox } from "./starknet.mjs";
 
 const DATA_DIR = process.env.STATE_DIR || "/data";
 const PUBLIC_DIR = process.env.PUBLIC_DIR || new URL("../public", import.meta.url).pathname;
 const PORT = Number(process.env.HTTP_PORT || 80);
+const HTTPS_PORT = Number(process.env.HTTPS_PORT ?? 443); // 0: off
 
 let version = process.env.PACKAGE_VERSION || "";
 try {
@@ -54,13 +56,16 @@ const routes = {
   }),
 };
 
-const server = createPageServer({
+const page = {
   publicDir: PUBLIC_DIR,
   routes,
   allowedNames: ["starknet.my.ava.do", "starknet.avado.dnp.dappnode.eth", "my.starknet.avado.dnp.dappnode.eth", "dappnodepackage-starknet.avado.dnp.dappnode.eth"],
   log,
-});
+};
+const server = createPageServer(page);
 server.listen(PORT, "0.0.0.0", () => log(`page on port ${PORT}`));
+// The same page on https (port 443) once the box's *.my.ava.do certificate is there
+const https = HTTPS_PORT ? serveHttps(createPageHandler(page), { port: HTTPS_PORT, log }) : null;
 box.begin();
 
 let stopping = false;
@@ -70,6 +75,7 @@ for (const sig of ["SIGTERM", "SIGINT"]) {
     stopping = true;
     log(`${sig}: stopping the validator and Juno`);
     server.close();
+    https?.stop();
     await box.shutdown();
     process.exit(0);
   });

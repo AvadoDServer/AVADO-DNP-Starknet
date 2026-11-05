@@ -40,6 +40,15 @@ on a device connected to the AVADO can use `http://starknet.my.ava.do:6060/v0_10
 127.0.0.1 inside the container. The page API has the same guards as the other AVADO pages: Host
 allow-list (DNS rebinding) and a same-origin check plus a custom header on every change.
 
+**HTTPS.** The page also answers on https://starknet.my.ava.do (port 443) with the box's
+`*.my.ava.do` certificate, the one the Admin and the other AVADO apps with https use (the
+box's DAPPMANAGER serves it at http://dappmanager.my.ava.do; iso.ava.do is the second source).
+Chrome tries https first ("Always use secure connections"), so without it Chrome showed "This
+site doesn't support a secure connection". The certificate is used only when it is for
+`*.my.ava.do`, valid for at least another hour and matches its key; until then the page stays
+http only and it is checked every 5 minutes, after that daily. http works as before, also in
+the Admin's Setup tab. `build/service/src/lib/https.mjs` (the same file in AVADO-DNP-Starknet and AVADO-DNP-Aztec).
+
 ## Requirements
 
 - Geth, Nethermind or Reth on mainnet on the same AVADO (synced). Without one, the page says

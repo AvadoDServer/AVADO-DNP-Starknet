@@ -1,6 +1,6 @@
 {
   "name": "avado-starknet-validator",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "AVADO Starknet Validator: Juno and the Starknet staking validator with a plain-language page",
   "license": "GPL-3.0",
