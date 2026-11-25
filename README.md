@@ -5,7 +5,7 @@ AVADO box, with a plain-language page at http://starknet.my.ava.do.
 
 ## What it does
 
-- Runs **Juno** (Nethermind's Starknet node, v0.17.0) on Starknet mainnet. Juno checks Starknet
+- Runs **Juno** (Nethermind's Starknet node, v0.17.1) on Starknet mainnet. Juno checks Starknet
   against the **Ethereum node on the same AVADO** (Geth, Nethermind or Reth, found automatically
   over the AVADO network), so the box does not have to trust anyone's servers.
 - **Fast start**: on an empty database it downloads the pruned copy the Juno team publishes
@@ -13,7 +13,7 @@ AVADO box, with a plain-language page at http://starknet.my.ava.do.
   downloading (no second copy on disk; resumes after a dropped connection; checks free space
   first). Juno then runs with `--prune-mode=4500` (about four epochs of history), which is all an
   attester needs. The owner can choose to sync from the first block instead.
-- Runs Nethermind's **attestation tool** (`starknet-staking-v2` v0.3.1) once the owner has entered
+- Runs Nethermind's **attestation tool** (`starknet-staking-v2` v0.4.0) once the owner has entered
   the operational account and Juno has caught up.
 - Shows, in plain words: node state and progress, which Ethereum node it uses, the validator state,
   linked stake, STRK left for fees on the operational account, last attestation, attestations sent /
